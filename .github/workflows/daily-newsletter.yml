@@ -1,0 +1,40 @@
+name: Daily Newsletter
+
+# Runs at 13:00 UTC (= 6 AM PDT, March-November)
+# and  14:00 UTC (= 6 AM PST, November-March).
+# The Python script gates on the actual Pacific hour so only one fires per day.
+# This handles daylight savings transitions automatically with no maintenance.
+
+on:
+  schedule:
+    - cron: '0 13 * * *'
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+    inputs:
+      force_run:
+        description: 'Send a test newsletter right now (bypasses the 6 AM gate)'
+        type: boolean
+        default: true
+
+jobs:
+  send-newsletter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate and send newsletter
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          FORCE_RUN: ${{ github.event.inputs.force_run == 'true' && '1' || '0' }}
+        run: python newsletter_generator.py
