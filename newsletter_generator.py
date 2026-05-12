@@ -33,15 +33,17 @@ client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
 def should_run_now() -> bool:
-    """Only run when it's actually 6 AM Pacific.
+    """Run if it's the morning send window in Pacific time.
 
-    GitHub Actions cron runs in UTC, so we schedule both 13:00 UTC (PDT 6 AM)
-    and 14:00 UTC (PST 6 AM) and let this gate prevent duplicate sends.
+    GitHub Actions cron is best-effort and can be delayed 15-60+ minutes.
+    We schedule both 13:00 and 14:00 UTC; whichever lands in the 5-7 AM PT
+    window wins. Only one of the two will fall in that window during any
+    given DST regime, so we still only send once per day.
     """
     if os.environ.get("FORCE_RUN") == "1":
         return True
     pt_hour = datetime.now(TIMEZONE).hour
-    return pt_hour == 6
+    return 5 <= pt_hour <= 7
 
 
 def fetch_category(category_key: str, prompt_config: dict) -> dict:
